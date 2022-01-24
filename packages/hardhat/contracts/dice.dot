@@ -1,0 +1,114 @@
+// SPDX-License-Identifier: MIT
+pragma solidity >=0.8.0 <0.9.0;
+
+
+import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
+
+
+import "hardhat/console.sol";
+// import "@openzeppelin/contracts/access/Ownable.sol"; 
+// https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol
+// test game ["0xc733adcfc200590d37612f6523006dd0d55a0cc6", "0x500B8E6C13D313ceA4a3C24c3FEDF24857b1E02F", "0xe9f6aaa9702452ff519e1bce050f1c5a80415920"]
+contract YourContract is VRFConsumerBase {
+
+  event gameSet(Game game);
+
+  uint256 internal gameCounter = 0;
+  uint256 public randomResult;
+  uint256 internal fee;
+  bytes32 internal keyHash;
+
+  struct Game {
+    address[] players;
+    uint8[3] scores;
+    uint8[] dice;
+    uint256 bet;
+    bool gameOver;
+  }
+
+  Game[] internal games;
+
+  mapping (address => uint) internal userToGameId;
+
+  constructor() 
+        VRFConsumerBase(
+            0xdD3782915140c8f3b190B5D67eAc6dc5760C46E9, // VRF Coordinator
+            0xa36085F69e2889c224210F603D836748e7dC0088  // LINK Token
+        )
+    {
+        keyHash = 0x6c3699283bda56ad74f6b855546325b68d482e983852a7a82979cc4807b641f4;
+        fee = 0.1 * 10 ** 18; // 0.1 LINK (Varies by network)
+    }
+    
+    /** 
+     * Requests randomness 
+     */
+    function getRandomNumber() public returns (bytes32 requestId) {
+        require(LINK.balanceOf(address(this)) >= fee, "Not enough LINK - fill contract with faucet");
+        return requestRandomness(keyHash, fee);
+    }
+
+    /**
+     * Callback function used by VRF Coordinator
+     */
+    function fulfillRandomness(bytes32 requestId, uint256 randomness) internal override {
+        randomResult = randomness;
+    }
+  function getAllGames() public view returns(Game[] memory) {
+    return games;
+  }
+
+  function getGame(uint _gameId) public view returns(Game memory) {
+    return games[_gameId];
+  }
+
+  function newGame(address[] memory _addresses) public {
+    uint8[] memory arr;
+    Game memory game = Game(_addresses, [4, 0, 10], arr, 0 ether, false);
+    games.push(game);
+    userToGameId[msg.sender] = gameCounter;
+    gameCounter++;
+    emit gameSet(game);
+  }
+
+ function joinGame(uint _gameId) public {
+    require(_gameId != userToGameId[msg.sender], "User is already in the game");
+    Game storage game = games[_gameId];
+    userToGameId[msg.sender] = _gameId;
+    game.players.push(msg.sender);
+  }
+  
+  function setBet() public payable {
+    require(msg.value > 0, "Must be greater than 0");
+    uint gameId = userToGameId[msg.sender];
+    Game storage game = games[gameId];
+    game.bet += msg.value;
+  }
+
+  function checkBet(uint _gameId) public view returns(uint) {
+    return games[_gameId].bet;
+  }
+
+  function rollDice(uint _gameId) private {
+    require(_gameId == userToGameId[msg.sender]);
+
+  }
+
+  function payWinner() public {
+    uint gameId = userToGameId[msg.sender];
+    uint winner;
+    Game storage game = games[gameId];
+    uint lowestScore = 1000;
+    uint8[3] memory scores = game.scores;
+    for (uint i; i < scores.length; i++) {
+      if (scores[i] < lowestScore) {
+        winner = i;
+        lowestScore = scores[i];
+      }
+    }
+    uint totalBet = game.bet;
+    require(game.bet >= totalBet);
+    game.bet -= totalBet;
+    payable(games[gameId].players[winner]).transfer(totalBet);
+  }
+}

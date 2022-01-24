@@ -17,16 +17,31 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
   const { deployer } = await getNamedAccounts();
   const chainId = await getChainId();
 
-  await deploy("YourContract", {
+  await deploy("DiceGameFactory", {
     // Learn more about args here: https://www.npmjs.com/package/hardhat-deploy#deploymentsdeploy
     from: deployer,
     // args: [ "Hello", ethers.utils.parseEther("1.5") ],
     log: true,
     waitConfirmations: 5,
   });
-
+  await deploy("DiceGame", {
+    // Learn more about args here: https://www.npmjs.com/package/hardhat-deploy#deploymentsdeploy
+    from: deployer,
+    // args: [ "Hello", ethers.utils.parseEther("1.5") ],
+    log: true,
+    waitConfirmations: 5,
+  });
   // Getting a previously deployed contract
-  const YourContract = await ethers.getContract("YourContract", deployer);
+
+  const DiceGameFactory = await ethers.getContract("DiceGameFactory", deployer);
+  const DiceGame = await ethers.getContract("DiceGame", deployer);
+
+  await DiceGameFactory.transferOwnership(
+    "0x54eb82e4ec25eb173e1668dd5ab0943904d87331"
+  );
+  await DiceGame.transferOwnership(
+    "0x54eb82e4ec25eb173e1668dd5ab0943904d87331"
+  );
   /*  await YourContract.setPurpose("Hello");
   
     To take ownership of yourContract using the ownable library uncomment next line and add the 
@@ -76,4 +91,4 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
   //   console.error(error);
   // }
 };
-module.exports.tags = ["YourContract"];
+module.exports.tags = ["DiceGame"];
