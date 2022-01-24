@@ -1,3 +1,9 @@
+# Web Threes Dice Game Smart Contract
+
+My first smart contract developed for use on testnet only. Creates and tracks games, receives bets, and pays the winners at the end of the round before resetting the game
+
+> Developed with Scaffold-ETH. For more details their readMe is below ⬇️
+
 # 🏗 Scaffold-ETH
 
 > everything you need to build on Ethereum! 🚀
