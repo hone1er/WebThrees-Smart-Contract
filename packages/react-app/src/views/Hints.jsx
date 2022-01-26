@@ -105,7 +105,7 @@ export default function Hints({ yourLocalBalance, mainnetProvider, price, addres
         <Select
           showSearch
           value={selectedToken}
-          onChange={value => {
+          onChange={(value) => {
             console.log(`selected ${value}`);
             setSelectedToken(value);
           }}

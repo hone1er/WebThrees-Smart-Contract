@@ -9,6 +9,7 @@ contract DiceGame is DiceGameFactory{
   function placeBet() public payable {
     require(msg.value > 0, "must be greater than 0");
     uint gameId = userToGameId[msg.sender];
+    require(getStatus(_gameId) == Status.BetsPending, "Bets are not being placed right now");
     uint userIndex = userToIndex[msg.sender];
     Game storage game = games[gameId];
     game.bet[userIndex] += msg.value;
@@ -19,7 +20,7 @@ contract DiceGame is DiceGameFactory{
   }
 
   function setScore(uint _gameId, uint8 _score) public {
-    require(getStatus(_gameId) == Status.ScoresPending, "Bets are not being placed currently");
+    require(getStatus(_gameId) == Status.ScoresPending, "This action cannot be performed right now");
     Game storage game = games[_gameId];
     game.scores[userToIndex[msg.sender]] = _score;
     if (game.lowScore > _score) {
@@ -61,17 +62,19 @@ contract DiceGame is DiceGameFactory{
 
   function resetGame(Game storage _game) internal {
     resetScores(_game);
-    resetBets(game);
-    _game.lowScore = 100;
+    resetBets(_game);
+    _game.lowScore = 50;
     _game.currentStatus = Status.BetsPending;
   }
 
-  function payWinner(uint _gameId) public {
+  function payWinner(uint _gameId) public payable {
     require(getStatus(_gameId) == Status.Payment, "Game has not ended");
     Game storage game = games[_gameId];
     uint totalBet = getTotalBet(_gameId);
     resetGame(game);
-    payable(game.winner).call{value: totalBet};
+    
+    (bool sent, bytes memory data) = game.winner.call{value: totalBet}("");
+    require(sent, "Failed to send Ether to winner");
     emit GameSet(game, "game over");
   }
   }

@@ -46,7 +46,6 @@ contract DiceGameFactory is Ownable{
     
   receive() external payable { }
 
-
   /// @notice Retrieve all games ever created
   /// @return All games in storage
   function getAllGames() public view returns(Game[] memory) {
@@ -74,12 +73,11 @@ contract DiceGameFactory is Ownable{
   function newGame() public {
     address[] memory players;
     address winner;
-    uint8 lowScore;
     uint8[] memory scores;
     uint256[] memory bet;
     string memory roomName;
     
-    Game memory game = Game(players, winner, lowScore, scores, bet, roomName, false, Status.BetsPending);
+    Game memory game = Game(players, winner, 50, scores, bet, roomName, false, Status.BetsPending);
     games.push(game);
     userToGameId[msg.sender] = gameCounter;
     userToIndex[msg.sender] = uint8(0);
@@ -106,7 +104,6 @@ contract DiceGameFactory is Ownable{
   /// @param _roomName The name to initialize the new game with
   function setGame(string memory _roomName) public {
     uint gameId = userToGameId[msg.sender];
-    require(games[gameId].initialized == false, "Game already initialized");
     initialize(gameId, _roomName);
     roomNameToIndex[_roomName] = gameId;
     emit GameSet(games[gameId], "new game");
@@ -133,11 +130,13 @@ contract DiceGameFactory is Ownable{
 
   /// @notice Returns all bets to respective users
   /// @param _gameId The index of the game in the games array for lookup
-  function emergencyWithdraw(uint _gameId) public onlyOwner {
+  function emergencyWithdraw(uint _gameId) public payable onlyOwner {
     Game storage game = games[_gameId];
     for (uint i = 0; i < game.players.length; i++) {
-    payable(game.players[i]).call{value: game.bet[i]};
+    uint bet = game.bet[i];
     game.bet[i] -= game.bet[i];
+    (bool sent, bytes memory data) = game.players[i].call{value: bet}("");
+    require(sent, "Failed to send Ether to winner");
     game.scores[i] = 100;
     }
   }
