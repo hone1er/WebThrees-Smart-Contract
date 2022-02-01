@@ -116,7 +116,7 @@ contract DiceGameFactory is Ownable{
     require(game.currentStatus == Status.BetsPending, "Cannot join until next round begins");
     userToGameId[msg.sender] = _gameId;
     game.players.push(msg.sender);
-    userToIndex[msg.sender] = uint8(game.scores.length - 1);
+    userToIndex[msg.sender] = uint8(game.scores.length);
     game.scores.push(uint8(100));
     game.bet.push(uint(0));
     emit GameSet(game, "joinGame");

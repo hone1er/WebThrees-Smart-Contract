@@ -3,18 +3,24 @@ pragma solidity >=0.8.0 <0.9.0;
 import "./DiceGameFactory.sol"; 
 contract DiceGame is DiceGameFactory{ 
 
-  event BetPlaced(address indexed _from, uint _gameId, uint _value);
+  event BetPlaced(address _from, uint _gameId, uint _value);
 
 
   function placeBet() public payable {
     require(msg.value > 0, "must be greater than 0");
     uint gameId = userToGameId[msg.sender];
-    require(getStatus(_gameId) == Status.BetsPending, "Bets are not being placed right now");
+    require(getStatus(gameId) == Status.BetsPending, "Bets are not being placed right now");
     uint userIndex = userToIndex[msg.sender];
     Game storage game = games[gameId];
     game.bet[userIndex] += msg.value;
-    if (userToIndex[msg.sender] == game.scores.length - 1) {
-      game.currentStatus = Status.ScoresPending;
+    bool allBetsPlaced = true;
+    for (i; i < game.scores.length - 1; i++) {
+      if (game.scores[i] => 50) {
+        allBetsPlaced = false
+      }
+    if (allBetsPlaced) {
+      game.currentStatus = Status.ScoresPending
+    }
     }
     emit BetPlaced(msg.sender, gameId, msg.value);
   }
@@ -72,7 +78,6 @@ contract DiceGame is DiceGameFactory{
     Game storage game = games[_gameId];
     uint totalBet = getTotalBet(_gameId);
     resetGame(game);
-    
     (bool sent, bytes memory data) = game.winner.call{value: totalBet}("");
     require(sent, "Failed to send Ether to winner");
     emit GameSet(game, "game over");
