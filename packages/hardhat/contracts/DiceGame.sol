@@ -14,9 +14,10 @@ contract DiceGame is DiceGameFactory{
     Game storage game = games[gameId];
     game.bet[userIndex] += msg.value;
     bool allBetsPlaced = true;
-    for (i; i < game.scores.length - 1; i++) {
+    for (uint i; i < game.scores.length - 1; i++) {
       if (game.scores[i] => 50) {
         allBetsPlaced = false
+        return
       }
     if (allBetsPlaced) {
       game.currentStatus = Status.ScoresPending
@@ -32,6 +33,11 @@ contract DiceGame is DiceGameFactory{
     if (game.lowScore > _score) {
       game.lowScore = _score;
       game.winner = msg.sender;
+    }
+    for (uint i; i < game.scores.length; i++) {
+      if (game.scores[i] >= 50) {
+        
+      } 
     }
     if (userToIndex[msg.sender] == game.scores.length - 1) {
       game.currentStatus = Status.Payment;
