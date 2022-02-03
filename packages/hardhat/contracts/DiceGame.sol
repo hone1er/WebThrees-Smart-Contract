@@ -12,16 +12,15 @@ contract DiceGame is DiceGameFactory{
     require(getStatus(gameId) == Status.BetsPending, "Bets are not being placed right now");
     uint userIndex = userToIndex[msg.sender];
     Game storage game = games[gameId];
-    game.bet[userIndex] += msg.value;
+    game.bets[userIndex] += msg.value;
     bool allBetsPlaced = true;
     for (uint i; i < game.scores.length - 1; i++) {
-      if (game.scores[i] => 50) {
-        allBetsPlaced = false
-        return
+      if (game.bets[i] <= 0) {
+        allBetsPlaced = false;
       }
-    if (allBetsPlaced) {
-      game.currentStatus = Status.ScoresPending
     }
+    if (allBetsPlaced) {
+      game.currentStatus = Status.ScoresPending;
     }
     emit BetPlaced(msg.sender, gameId, msg.value);
   }
@@ -30,16 +29,16 @@ contract DiceGame is DiceGameFactory{
     require(getStatus(_gameId) == Status.ScoresPending, "This action cannot be performed right now");
     Game storage game = games[_gameId];
     game.scores[userToIndex[msg.sender]] = _score;
-    if (game.lowScore > _score) {
-      game.lowScore = _score;
-      game.winner = msg.sender;
-    }
-    for (uint i; i < game.scores.length; i++) {
+    bool allScoresSet = true;
+    for (uint8 i; i < game.scores.length - 1; i++) {
+      if (game.scores[i] < game.scores[game.winnerIndex]) {
+        game.winnerIndex = uint8(i);
+      }
       if (game.scores[i] >= 50) {
-        
+        allScoresSet = false;
       } 
     }
-    if (userToIndex[msg.sender] == game.scores.length - 1) {
+    if (allScoresSet) {
       game.currentStatus = Status.Payment;
     }
   }
@@ -47,8 +46,8 @@ contract DiceGame is DiceGameFactory{
   function getTotalBet(uint _gameId) public view returns(uint){
     uint totalBet;
     for (uint i; i < games[_gameId].players.length; i++) {
-      if (i <= games[_gameId].bet.length - 1) {
-        totalBet += games[_gameId].bet[i];
+      if (i <= games[_gameId].bets.length - 1) {
+        totalBet += games[_gameId].bets[i];
       }
     }
     return totalBet;
@@ -66,8 +65,8 @@ contract DiceGame is DiceGameFactory{
 
   function resetBets(Game storage _game) internal {
       for (uint i; i < _game.players.length; i++) {
-        if (i <= _game.bet.length - 1) {
-        _game.bet[i] = 0;
+        if (i <= _game.bets.length - 1) {
+        _game.bets[i] = 0;
       }
     }
   }
@@ -75,7 +74,7 @@ contract DiceGame is DiceGameFactory{
   function resetGame(Game storage _game) internal {
     resetScores(_game);
     resetBets(_game);
-    _game.lowScore = 50;
+    _game.winnerIndex = 0;
     _game.currentStatus = Status.BetsPending;
   }
 
@@ -84,7 +83,7 @@ contract DiceGame is DiceGameFactory{
     Game storage game = games[_gameId];
     uint totalBet = getTotalBet(_gameId);
     resetGame(game);
-    (bool sent, bytes memory data) = game.winner.call{value: totalBet}("");
+    (bool sent, bytes memory data) = game.players[game.winnerIndex].call{value: totalBet}("");
     require(sent, "Failed to send Ether to winner");
     emit GameSet(game, "game over");
   }
